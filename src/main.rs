@@ -1,3 +1,4 @@
+use std::f64::consts::{PI, TAU};
 use image::RgbImage;
 use palette::{LinLuma, Srgb, FromColor, Hsv, Hsl};
 
@@ -27,8 +28,11 @@ fn main() {
             let min_y_values = (noise_min_min, noise_min_max);
             let max_y_values = (noise_max_min, noise_max_max);
 
+            const CENTER: (u32, u32) = (IMAGE_WIDTH / 2, IMAGE_HEIGHT / 2);
             for y_off in 0..CHUNK_HEIGHT {
                 let y = cy_min + y_off;
+                let dist_y = CENTER.1.abs_diff(y).pow(2);
+                let y_frac = y as f64 / IMAGE_HEIGHT as f64;
                 let v_y = y_off as f64 / CHUNK_HEIGHT as f64;
                 for x_off in 0..CHUNK_WIDTH {
                     let x = cx_min + x_off;
@@ -38,7 +42,15 @@ fn main() {
                         let x_values = (x1_value, x2_value);
                         let v_x = x_off as f64 / CHUNK_WIDTH as f64;
                         let value = interpolate(x_values, v_x);
-                        let hsv = Hsv::new((x as f64 / IMAGE_WIDTH as f64) * 360.0, 0.8, value);
+
+                        let dist_x = CENTER.0.abs_diff(x).pow(2);
+                        let dist_sq = dist_x + dist_y;
+                        let dist = f64::sqrt(dist_sq as f64);
+                        let frac_dist = dist / u64::max(CENTER.0 as u64, CENTER.1 as u64) as f64;
+                        let x_frac = x as f64 / IMAGE_WIDTH as f64;
+                        let angle = f64::atan2(y as f64 - CENTER.1 as f64, x as f64 - CENTER.0 as f64) + PI;
+
+                        let hsv = Hsv::new(x_frac * 360.0, 1.0 * (0.7 - (0.5 - y_frac).abs()), value * (0.7 - (0.5 - y_frac).abs()));
                         let (r, g, b) = Srgb::from_color(hsv).into_components();
                         pixel.0 = [r, g, b].map(|f| (f * 255.0) as u8);
                     }
